@@ -1,1 +1,0 @@
-readme file for virtual disk assignment
