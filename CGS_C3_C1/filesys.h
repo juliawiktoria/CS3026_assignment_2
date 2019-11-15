@@ -26,7 +26,7 @@
 
 #define UNUSED        -1
 #define ENDOFCHAIN     0
-#define ENDOFFILE           -1
+#define ENDOFFILE     -1
 
 
 typedef unsigned char Byte ;
@@ -99,10 +99,19 @@ typedef struct filedescriptor {
 } MyFILE ;
 
 
-
-void format() ;
+// provided 
 void writedisk ( const char * filename ) ;
+
+// CSG_D3_D1
+void format() ;
 void copyFAT ( ) ;
+
+// CSG_C3_C1
+MyFILE *   myfopen       ( const char *, const char * );
+void       myfputc       ( int, MyFILE * ) ;
+int        myfgetc       ( MyFILE * ) ;
+void       myfclose      ( MyFILE * ) ;
+fatentry_t nextFreeBlock ( ) ;
 
 #endif
 

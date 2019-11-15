@@ -71,7 +71,7 @@ void writeblock ( diskblock_t * block, int block_address )
  */
 
 // -----------------------------------------------------------------------------------------------
-
+// CSG_D3_D1
 /* implement format()
  */
 void format ( )
@@ -133,8 +133,6 @@ void format ( )
    rootDirIndex = 3;
 }
 
-// helper functions
-
 void copyFAT()
 {
 
@@ -153,6 +151,73 @@ void copyFAT()
    }
 }
 // ---------------------------------------------------------------------------------
+// CSG_C3_C1
+
+MyFILE * myfopen( const char * filename, const char * mode )
+{
+   // check if mode correct
+   if ( mode != "w" || mode != "r" )
+   {
+      printf("Incorrect file mode!\n");
+      return;
+   }
+
+   if ( mode == 'w' )
+   {
+      // create a file
+      MyFILE * file = malloc(sizeof(MyFILE));
+
+      // assign mode to the file
+      strcpy(file->mode, mode);
+
+      // get next free block in FAT
+      fatentry_t freeBlock = nextFreeBlock();
+      file->blockno = freeBlock;
+      file->pos = 0;
+   }
+
+}
+
+void myfclose( MyFILE * stream )
+{
+   // check if file is in writing mode and save unsaved data
+   if ( stream->mode == "w" )
+   {
+
+   }
+}
+
+void myfputc(int b, MyFILE * stream )
+{
+   // return if file is in read-only mode
+   if ( stream->mode == "r" )
+   {
+      return;
+   }
+}
+
+int myfgetc(MyFILE * stream )
+{
+   int result;
+   int charCounter = 0;
+
+   // return if file is in write-only mode
+   if ( stream->mode == "w" )
+   {
+      return;
+   }
+
+   return result; 
+}
+
+fatentry_t nextFreeBlock () 
+{
+   int i = 0;
+   while ( FAT[i] != UNUSED ) i++;
+   FAT[i] = ENDOFCHAIN;
+   return (fatentry_t) i;
+}
+
 /* use this for testing
  */
 
