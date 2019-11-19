@@ -110,10 +110,7 @@ void format ( )
 
    copyFAT();
 
-   /* prepare root directory
-   * write root directory block to virtual disk
-   */
-  // create root directory block : fill it with '\0',
+     // create root directory block : fill it with '\0',
    diskblock_t root_block;
    for (int i = 0; i < BLOCKSIZE; i++)
    {
@@ -121,15 +118,14 @@ void format ( )
    }
 
    // indicate that the block is a directory
-   root_block.dir.isdir = 1;
+   root_block.dir.isdir = TRUE;
 
    // first element in the entry list
-   root_block.dir.nextEntry = 0;
+   root_block.dir.nextEntry = FALSE;
    
    // save block to the disk
-   writeblock(&root_block, 3);
-
    rootDirIndex = 3;
+   writeblock(&root_block, rootDirIndex);
 }
 
 // helper functions
@@ -137,7 +133,7 @@ void format ( )
 void copyFAT()
 {
 
-   for (int i = 1; i <= ( MAXBLOCKS / FATENTRYCOUNT ); i++) 
+   for (int i = 0; i < ( MAXBLOCKS / FATENTRYCOUNT ); i++) 
    {
       // declare new block
       diskblock_t block;
@@ -145,7 +141,7 @@ void copyFAT()
       for (int entry = 0; entry < FATENTRYCOUNT; entry++)
       {
          // fill the block
-         block.fat[entry] = FAT[i];
+         block.fat[entry] = FAT[entry + FATENTRYCOUNT * i];
          // save to virtual disk
          writeblock(&block, i + 1);
       }
