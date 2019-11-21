@@ -75,17 +75,12 @@ void writeblock ( diskblock_t * block, int block_address )
  */
 void format ( )
 {
-   diskblock_t block ;
+   // prepare an empty block 0
+   diskblock_t block = getEmptyBlock();
    direntry_t  rootDir ;
    int         pos             = 0 ;
    int         fatentry        = 0 ;
    int         fatblocksneeded =  ( MAXBLOCKS / FATENTRYCOUNT ) ;
-
-   // prepare block 0 : fill it with '\0',
-   for (int i = 0; i < BLOCKSIZE; i++)
-   {
-      block.data[i] = '\0';
-   }
 
    // use strcpy() to copy some text to it for test purposes
    strcpy(block.data, "Julia Z CS3026 Operating Systems Task");
@@ -106,12 +101,8 @@ void format ( )
    // write FAT table to the virtual disk using a helper function
    copyFAT();
 
-   // create root directory block : fill it with '\0',
-   diskblock_t root_block;
-   for (int i = 0; i < BLOCKSIZE; i++)
-   {
-      root_block.data[i] = '\0';
-   }
+   // create root directory block filled with '\0',
+   diskblock_t root_block = getEmptyBlock();
 
    // indicate that the block is a directory
    root_block.dir.isdir = TRUE;
@@ -144,10 +135,25 @@ void copyFAT()
       }
    }
 }
+
+// ----------------------------------------------------------------------------------------------------------------
+// ADDITIONAL UTILITY AND HELPER FUNCTIONS
+// ----------------------------------------------------------------------------------------------------------------
+
+// create and return an empty block (filled with '\0's)
+diskblock_t getEmptyBlock()
+{
+   diskblock_t block;
+   for (int i = 0; i < BLOCKSIZE; i++)
+   {
+      block.data[i] = '\0';
+   }
+   return block;
+}
+
 // ---------------------------------------------------------------------------------
 /* use this for testing
  */
-
 void printBlock ( int blockIndex )
 {
    printf ( "virtualdisk[%d] = %s\n", blockIndex, virtualDisk[blockIndex].data ) ;
