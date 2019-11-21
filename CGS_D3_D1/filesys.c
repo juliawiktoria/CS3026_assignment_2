@@ -93,9 +93,6 @@ void format ( )
    // write block 0 to virtual disk using provided writeblock() function
    writeblock(&block, 0);
 
-	/* prepare FAT table
-	 * write FAT blocks to virtual disk
-	 */
    // prapare FAT table according to definition
    for (int i = 0; i < MAXBLOCKS; i++)
    {
@@ -107,10 +104,9 @@ void format ( )
    FAT[3] = ENDOFCHAIN;
 
    // write FAT table to the virtual disk using a helper function
-
    copyFAT();
 
-     // create root directory block : fill it with '\0',
+   // create root directory block : fill it with '\0',
    diskblock_t root_block;
    for (int i = 0; i < BLOCKSIZE; i++)
    {
@@ -126,6 +122,7 @@ void format ( )
    // save block to the disk
    rootDirIndex = 3;
    writeblock(&root_block, rootDirIndex);
+   
 }
 
 // helper functions
