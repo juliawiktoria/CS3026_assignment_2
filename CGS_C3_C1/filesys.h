@@ -112,6 +112,11 @@ void       myfputc       ( int, MyFILE * ) ;
 int        myfgetc       ( MyFILE * ) ;
 void       myfclose      ( MyFILE * ) ;
 fatentry_t nextFreeBlock ( ) ;
+int lookForFile(const char * , diskblock_t );
+int emptyDirIndex (diskblock_t);
+int emptyFATindex ();
+void createFATchain ( int );
+diskblock_t getEmptyBlock ();
 
 #endif
 
