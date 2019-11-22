@@ -105,6 +105,7 @@ void writedisk ( const char * filename ) ;
 // CSG_D3_D1
 void format() ;
 void copyFAT ( ) ;
+diskblock_t getEmptyBlock ();
 
 // CSG_C3_C1
 MyFILE *   myfopen       ( const char *, const char * );
@@ -116,7 +117,7 @@ int lookForFile(const char * , diskblock_t );
 int emptyDirIndex (diskblock_t);
 int emptyFATindex ();
 void createFATchain ( int );
-diskblock_t getEmptyBlock ();
+
 
 #endif
 

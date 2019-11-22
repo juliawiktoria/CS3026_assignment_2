@@ -13,40 +13,50 @@ void taskD ()
 void taskC()
 {
     format();
-    // create "testfile.txt"
-    MyFILE * file;
-    // MyFILE * file_2;
 
-    file = myfopen("testfile.txt", "w");
+    MyFILE * fileWrite;
+    fileWrite = myfopen("testfile.txt", "w");
 
+    // write the alphabet
     char * alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-	int x = 0;
-	int y = 0; 
-	//insert each character of alphabet to the file 4096 times(4KB file)
-	for(x=0; x < (4*BLOCKSIZE); x++)
+    int j = 0;
+	for(int i = 0; i < (4 * BLOCKSIZE); i++)
     {
-		if( y == 26 )
+		if( j == 26 )
         {
-            y = 0;
+            j = 0;
         }
-		myfputc(alphabet[y], file);
-		y++;	
+		myfputc(alphabet[j], fileWrite);
+		j++;	
 	}
-	//insert EOF to end of the file
-	myfputc(EOF, file);
 
-    // file_2 = myfopen("testfile.txt", "w");
-    // write 4kB of text into testfile.txt
-    // char * alph = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    // myfputc(EOF, file);
-    // close the file
-    // myfclose(file);
+	//insert EOF to end of the file and close it
+	myfputc(ENDOFFILE, fileWrite);
+    myfclose(fileWrite);
+
+    // open file for reading
+    MyFILE *fileRead = myfopen("testfile.txt", "r");
+    // create a real file
+    FILE *realFile = fopen("testfileC3_C1_copy.txt", "w");
+
+    // read the previously inputted alphabet
+	for (int i = 0; i < (4 * BLOCKSIZE); i++)
+	{
+		char character = myfgetc(fileRead);
+		// stop reading if end of file
+        if (character == ENDOFFILE)
+			break;
+		printf("%c", character);
+        // save every char to the real file
+        fputc(character, realFile);
+	}
+
+    // close file after reading
+	myfclose(fileRead);
+    // close real file after writing into it
+    fclose(realFile);
+
     writedisk("virtualdiskC3_C1");
-    // read the testfile.txt
-    // myfgetc();
-
-    // printBlock();
 }
 
 int main () {

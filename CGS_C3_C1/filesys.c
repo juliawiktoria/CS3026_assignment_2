@@ -153,24 +153,24 @@ void copyFAT()
 
 MyFILE * myfopen( const char * filename, const char * mode )
 {
-   diskblock_t block = virtualDisk[3]; // get the directory block
+   diskblock_t dir_block = virtualDisk[3]; // get the directory block
 
-   // check if mode correct
+   // check if mode correct = only 'w' or 'r'
    if ( *mode != 'w' && *mode != 'r' )
    {
       printf("Incorrect file mode!\n");
       return FALSE;
-   } // DONE
+   }
 
    // create new file descriptor
    MyFILE * newFile = malloc(sizeof(MyFILE));
-   // add mode to the file
+   
+   // assign mode to the file
    strcpy(newFile->mode, mode);
-   printf("%s\n", newFile->mode); // WORKS UP TO HERE
+   printf("%s\n", newFile->mode);
 
-   int fileLocation = lookForFile(filename, block);
-   printf("file location: %d\n", fileLocation);
-
+   // find out if file already exists (if so, return its location)
+   int fileLocation = lookForFile(filename, dir_block);
 
    if (fileLocation == -1) // FILE DOES NOT EXIST
    {
@@ -179,13 +179,14 @@ MyFILE * myfopen( const char * filename, const char * mode )
          printf("Error! Trying to read a file that does not exist!\n");
          return FALSE;
       }
-      else if (*mode == 'w')
+      else
       {
+         // create a completely new file for writing
          printf("Open file %s for writing\n", filename);
          newFile->pos = 0; // start from the beggining
 
          // find an empty directory for the file
-         int freeDir = emptyDirIndex(block);
+         int freeDir = emptyDirIndex(dir_block);
          if (freeDir == -1)
          {
             printf("No more free space on the disk!\n");
@@ -193,57 +194,40 @@ MyFILE * myfopen( const char * filename, const char * mode )
          }
 
          // find an unused FAT entry for the chain
-         int freeFAT = emptyFATindex();
-         if (freeFAT == -1)
+         int freeFATindex = emptyFATindex();
+         if (freeFATindex == -1)
          {
-            printf("Error! No free entries in the File Allocation Table\n");
+            printf("Error! No free entries in the FAT\n");
             return FALSE;
          }
          
-         FAT[freeFAT] = ENDOFCHAIN;
-         // createFATchain(fileLocation);
+         // create a FAT chain
+         FAT[freeFATindex] = ENDOFCHAIN;
 
          // allocate the newly found block to the newFile
-         newFile->blockno = freeFAT;
+         newFile->blockno = freeFATindex;
 
-         // set the position in the directory
-         block.dir.entrylist[freeDir].firstblock = freeFAT;
+         // set the position of the file in the directory
+         dir_block.dir.entrylist[freeDir].firstblock = freeFATindex;
 
+         // write FAT to the disk
          copyFAT();
 
-         strcpy(block.dir.entrylist[freeDir].name, filename);
-         block.dir.entrylist[freeDir].unused = FALSE;
+         // copy the filename to the directory
+         strcpy(dir_block.dir.entrylist[freeDir].name, filename);
+         // mark this entry in the directory as USED
+         dir_block.dir.entrylist[freeDir].unused = FALSE;
 
-         writeblock(&block, 3);
-
+         // save the block in the directory (index 3)
+         writeblock(&dir_block, 3);
       }
    }
    else // file exists
    {
       newFile->pos = 0; // start reading from the beginning
-      newFile->blockno = block.dir.entrylist[fileLocation].firstblock;
-
-      // if ( *mode == 'r' )
-      // {
-      //    // open file for reading
-      //    printf("open existing file for reading\n");
-      //    newFile->pos = 0; // start reading from the beginning
-      //    newFile->blockno = block.dir.entrylist[fileLocation].firstblock;
-
-      // }
-      // else if ( *mode == 'w')
-      // {
-      //    // open file for appending
-      //    printf("open existing file for writing\n");
-      //    newFile->pos = 0;
-      //    newFile->blockno = block.dir.entrylist[fileLocation].firstblock;
-      // }
-      // else
-      // {
-      //    printf("Incorrect mode!!!!!\n");
-      //    return FALSE;
-      // }
+      newFile->blockno = dir_block.dir.entrylist[fileLocation].firstblock;
    }
+
    return newFile;
 }
 
@@ -252,17 +236,22 @@ void myfclose( MyFILE * stream )
    // check if file is in writing mode and save unsaved data
    if ( stream->mode == "w" )
    {
-      // get the next unused block
-		int next = getUnusedBlock();
-		// set fat table block as used
-		FAT[stream->blockno] = next;
-		// move eoc to the next fat block
-		FAT[next] = ENDOFCHAIN;
-		// save fat table
+      // get the next empty FAT entry
+		int freeFATindex = emptyFATindex();
+
+		// create a FAT chain
+		FAT[stream->blockno] = freeFATindex;
+		FAT[freeFATindex] = ENDOFCHAIN;
+		
+      // write FAT to the disk
 		copyFAT();
-		// save the incomplete buffer (this is because we wouldnt always have 1024 byte filled buffer blocks
+
+		// write the buffer to the disk (save whatever is in there)
       writeblock(&stream->buffer, stream->blockno);
    }
+
+   // free the mallocated memory for file descriptor
+   free(stream);
 }
 
 void myfputc(int b, MyFILE * stream )
@@ -274,48 +263,63 @@ void myfputc(int b, MyFILE * stream )
       return;
    }
 
-	// if the position of the "text pointer" is equal or bigger than blocksize (1024 in this case), stops at 1024
+	// if the pointer points "outside the buffer"
 	if (stream->pos >= BLOCKSIZE)
 	{
-		// get the block number of the next unused block
+		// get the index of the next free FAT
 		int freeFATindex = emptyFATindex();
-		// change the fat table so that the block is checked as used
+
+		// extend the FAT chain
 		FAT[stream->blockno] = freeFATindex;
-		// set next block as eoc
 		FAT[freeFATindex] = ENDOFCHAIN;
 		
-      // save fat table
+      // save FAT to the disk
 		copyFAT();
 		
-		// reset the string stream pos/"text pointer" (kind of) 
+		// restart the character pointer
 		stream->pos = 0;
 
-		// save the buffer to the virtual disk (since the buffer is 1024bytes)
+		// write the buffer to the disk
       writeblock(&stream->buffer, stream->blockno);
 		
-      // empty the buffer
+      // reset the buffer so it's empty
 		stream->buffer = getEmptyBlock();
-		// assign the new unused block number to the buffer
+		// update the block number
 		stream->blockno = freeFATindex;
 	}
 
-	// put the character in the buffer and increment the position of the text pointer
+	// save the char in the file buffer
 	stream->buffer.data[stream->pos] = b;
+   // increment the current position
 	stream->pos++;	
 }
 
 int myfgetc(MyFILE * stream )
 {
    int result;
-   int charCounter = 0;
-
-   // return if file is in write-only mode
-   if ( stream->mode == "w" )
+	
+	if(stream->blockno == ENDOFCHAIN)
    {
-      return;
+      return ENDOFFILE;
    }
+	
+   // if at the end of a block
+	if (stream->pos % BLOCKSIZE == 0)
+	{
+		// set the number of the block
+		stream->blockno = FAT[stream->blockno];
 
-   return result; 
+      // get new block from the disk
+      stream->buffer = virtualDisk[stream->blockno];
+ 
+		// reset the position pointer
+		stream->pos = 0;	
+	}
+
+	// return character
+   result = stream->buffer.data[stream->pos];
+   stream->pos++;
+	return result;
 }
 
 // ----------------------------------------------------------------------------------------------------------------
@@ -341,7 +345,7 @@ int emptyFATindex ()
       if (FAT[j] == UNUSED) return j;
    }
 
-   return -1; //error
+   return -1; // return -1 if not found
 }
 
 // find the next unused directory and return its index
@@ -352,7 +356,7 @@ int emptyDirIndex (diskblock_t block)
       if (block.dir.entrylist[i].unused) return i;
    }
 
-   return -1; // no free space on disk 
+   return -1;
 }
 
 // check if a file already exists in the directory; return its index
