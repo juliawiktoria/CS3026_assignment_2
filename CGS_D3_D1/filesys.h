@@ -103,6 +103,7 @@ typedef struct filedescriptor {
 void format() ;
 void writedisk ( const char * filename ) ;
 void copyFAT ( ) ;
+diskblock_t getEmptyBlock();
 
 #endif
 
